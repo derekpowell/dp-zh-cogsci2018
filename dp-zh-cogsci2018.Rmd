@@ -1,0 +1,631 @@
+---
+title: "Expectations bias judgments of harm against others"
+bibliography: library.bib
+csl: apa6.csl
+document-params: "10pt, letterpaper"
+
+author-information: > 
+    \author{{\large \bf Derek Powell} \\ \texttt{derekpowell@stanford.edu} \\ Department of Psychology \\ Stanford University
+    \And {\large \bf Zachary Horne} \\ \texttt{zachary.horne@asu.edu} \\ Department of Psychology \\ Arizona State University}
+
+abstract: 
+    "People’s expectations play an important role in their evaluations and reactions to events. There is often disappointment when events fail to meet expectations—sometimes even when the events are still positive overall—and there is a special thrill to having one’s expectations exceeded. In four studies, we examined how expectations influence people’s judgments of events where another person or people were harmed. Participants judged pairs of events where a victim experienced a similar harm, but where victims were at different prior risk of being harmed. We found that people judged these events as being worse when they were less expected--that is, when the victims were initially at lower risk of being harmed. We argue that this bias has pernicious moral consequences."
+    
+keywords:
+    "Judgment and decision-making; Moral judgments; Bias"
+    
+output: cogsci2016::cogsci_paper
+---
+
+```{r global_options, include=FALSE}
+rm(list=ls())
+knitr::opts_chunk$set(fig.width=3, fig.height=3, fig.crop = F, fig.pos = "tb", fig.path='figs/',
+                      echo=F, warning=F, cache=F, message=F, sanitize = T)
+```
+
+```{r, libraries}
+library(png)
+library(grid)
+library(ggplot2)
+library(xtable)
+```
+
+```{r loadData}
+
+# load libraries
+library(tidyverse)
+library(brms)
+library(broom)
+# load in all the data
+
+
+# This was study 1, looking at outcomes/events and asking for "which is worse" and "moral" judgments (between subjects).
+
+# import outcome forced choice study
+outFC <- read.csv("Data/wiw-exp1-collapsed.csv", skip = 0, header = T)
+
+# remove unused qualtrics variables
+remove_cols <- c("RecipientLastdata",
+                 "RecipientFirstdata",
+                 "RecipientEmail",
+                 "Finished",
+                 # "ResponseId",
+                 "ExternalReference",
+                 "DistributionChannel",
+                 "UserLanguage",
+                 "Status")
+
+outFC <- outFC[ , -which(colnames(outFC) %in% remove_cols)]
+outFC <- outFC %>% filter(condition=="worse") # only taking wiw condition
+n1a <- nrow(outFC)
+outFC <- outFC %>%
+  filter(catch0==0, catch1==1) %>%
+  gather(key=item, value = response, quake:crib) 
+
+# STUDY 2
+# This study used new items but the task was otherwise very similar
+
+# import outcome forced choice study
+actFC <- read.csv("Data/wiw-exp2-collapsed.csv", skip = 0, header = T)
+
+# remove unused qualtrics variables
+remove_cols <- c("RecipientLastdata",
+"RecipientFirstdata",
+"RecipientEmail",
+"Finished",
+# "ResponseId",
+"ExternalReference",
+"DistributionChannel",
+"UserLanguage",
+"Status")
+
+actFC <- actFC[ , -which(colnames(actFC) %in% remove_cols)]
+n1b <- nrow(actFC)
+
+actFC <- actFC %>%
+filter(catch0==0, catch1==1) %>%
+gather(key=item, value = response, quake:kidnap)
+
+
+## In study 3, in these data 3 is neither, lower than 3 is the lower probability action. In the plot, greater than zero means choosing less likely as worse (I recoded things).
+
+
+# likert outcome study (2a)
+
+# import outcome likert choice study
+reverseItems <- c("footbridge","cancer","imprisoned","carAccident","fireFighter","allergic")
+
+outLik <- read.csv("Data/wiw-outcome-likert2-R.csv", skip = 0, header = T)
+
+outLik <- outLik %>% filter(DistributionChannel!="preview")
+# remove unused qualtrics variables
+remove_cols <- c("RecipientLastdata",
+                 "RecipientFirstdata",
+                 "RecipientEmail",
+                 "Finished",
+                 # "ResponseId",
+                 "ExternalReference",
+                 "DistributionChannel",
+                 "UserLanguage",
+                 "Status")
+
+outLik <- outLik[ , -which(colnames(outLik) %in% remove_cols)]
+
+outLik[, reverseItems] <- 6-outLik[, reverseItems] 
+
+n2a <- nrow(outLik)
+
+outLik <- outLik %>%
+  filter(check3==2, check2==5) %>%
+  gather(key=item, value = response,
+         carFactory,
+         footbridge,
+         badWater,
+         cancer,
+         rabies,
+         imprisoned,
+         ebola,
+         carAccident,
+         food,
+         fireFighter,
+         concussion,
+         allergic
+         )
+
+
+outLik <- outLik %>% mutate(response3=ifelse(response>3,1,ifelse(response < 3,-1, 0)))
+
+outLik <- outLik %>% mutate(response3r = response3*-1)
+
+
+# import action likert  study
+actLik <- read.csv("Data/wiw-action-likert-R.csv", skip = 0, header = T)
+
+# remove unused qualtrics variables 
+remove_cols <- c("RecipientLastdata",
+"RecipientFirstdata",
+"RecipientEmail",
+"Finished",
+# "ResponseId",
+"ExternalReference",
+"DistributionChannel",
+"UserLanguage",
+"Status")
+
+actLik <- actLik[ , -which(colnames(actLik) %in% remove_cols)]
+
+n2b <- nrow(actLik)
+
+actLik <- actLik %>%
+filter(check5==5, check1==1) %>%
+gather(key=item, value = response, chemicals:mugging)
+
+actLik <- actLik %>% mutate(response3=ifelse(response>3,1,ifelse(response < 3,-1, 0)))
+actLik <- actLik %>% mutate(response3r = response3*-1)
+
+```
+
+```{r}
+print_bf <- function(hypothesis) {
+  
+  bf <- hypothesis$hypothesis$Evid.Ratio
+  
+  if (is.na(bf)) {
+    return("< .001")
+  }
+  else if (bf < .001) {
+    return("< .001")
+  }
+  else if (bf > 1000) {
+    return("> 1000")
+  }
+  else {
+    return(paste("=", as.character(bf)))
+  }
+}
+```
+
+```{r participants}
+gender1a <- outFC %>% group_by(ResponseId) %>% summarize(sex=first(sex)) %>% ungroup() %>% count(sex)
+age1a <- median(outFC$age)
+finalN1a <- sum(gender1a$n)
+
+gender1b <- actFC %>% group_by(ResponseId) %>% summarize(sex=first(sex)) %>% ungroup() %>% count(sex)
+age1b <- median(actFC$age)
+finalN1b <- sum(gender1b$n)
+
+gender2a <- outLik %>% group_by(ResponseId) %>% summarize(sex=first(Q10)) %>% ungroup() %>% count(sex)
+age2a <- median(actLik$age)
+finalN2a <- sum(gender2a$n)
+
+gender2b <- actLik %>% group_by(ResponseId) %>% summarize(sex=first(sex)) %>% ungroup() %>% count(sex)
+age2b <- median(actLik$age)
+finalN2b <- sum(gender2b$n)
+```
+
+
+```{r bootstrapping, cache=TRUE}
+# data: outFC, actFC, outLik2, actLik
+library(boot)
+
+calc_prop_lik1 <- function(d, i) {
+  d2 <- d[i,]
+  resps <- d2 %>% count(response) %>% mutate(prob = n/nrow(d))
+  result <- sum(resps$prob[1:2])
+}
+
+calc_prop_lik0 <- function(d, i) {
+  d2 <- d[i,]
+  resps <- d2 %>% count(response) %>% mutate(prob = n/nrow(d))
+  result <- sum(resps$prob[4:5])
+}
+
+calc_prop_likNeither <- function(d, i) {
+  d2 <- d[i,]
+  resps <- d2 %>% count(response) %>% mutate(prob = n/nrow(d))
+  result <- resps$prob[3]
+}
+
+calc_prop1 <- function(d, i) {
+  d2 <- d[i,]
+  resps <- d2 %>% count(response) %>% mutate(prob = n/nrow(d))
+  result <- resps$prob[1]
+}
+
+calc_prop0 <- function(d, i) {
+  d2 <- d[i,]
+  resps <- d2 %>% count(response) %>% mutate(prob = n/nrow(d))
+  result <- resps$prob[2]
+}
+
+set.seed(2014)
+nSamp <- 1000
+actLik.boot1 <- boot(actLik, calc_prop_lik0, R=nSamp)
+actLik.boot0 <- boot(actLik, calc_prop_lik1, R=nSamp)
+actLik.bootN <- boot(actLik, calc_prop_likNeither, R=nSamp)
+outLik.boot1 <- boot(outLik, calc_prop_lik1, R=nSamp)
+outLik.boot0 <- boot(outLik, calc_prop_lik0, R=nSamp)
+outLik.bootN <- boot(outLik, calc_prop_likNeither, R=nSamp)
+actFC.boot1 <- boot(actFC, calc_prop1,R=nSamp)
+actFC.boot0 <- boot(actFC, calc_prop0,R=nSamp)
+
+outFC.boot1 <- boot(outFC, calc_prop1,R=nSamp)
+outFC.boot0 <- boot(outFC, calc_prop0,R=nSamp)
+
+# outFC.boot1 <- boot(outFC, calc_oddsRatio, R=1000)
+actLik.boot1 <- actLik.boot1$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="High-risk victims", rep=1:n(), exp=4)
+actLik.boot0 <- actLik.boot0$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="Low-risk victims", rep=1:n(), exp=4)
+actLik.bootN <- actLik.bootN$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="Neither", rep=1:n(), exp=4)
+
+outLik.boot1 <- outLik.boot1$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="High-risk victims", rep=1:n(), exp=3)
+outLik.boot0 <- outLik.boot0$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="Low-risk victims", rep=1:n(), exp=3)
+outLik.bootN <- outLik.bootN$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="Neither", rep=1:n(), exp=3)
+
+actFC.boot1 <- actFC.boot1$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="High-risk victims", rep=1:n(), exp=2)
+actFC.boot0 <- actFC.boot0$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="Low-risk victims", rep=1:n(), exp=2)
+
+outFC.boot1 <- outFC.boot1$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="High-risk victims", rep=1:n(), exp=1)
+outFC.boot0 <- outFC.boot0$t %>% as_tibble() %>% rename(prop=V1) %>% mutate(resp="Low-risk victims", rep=1:n(), exp=1)
+
+```
+
+```{r make_fig1}
+plt.fig1 <- bind_rows(actLik.boot1, 
+          actLik.boot0,
+          actLik.bootN,
+          outLik.boot1, 
+          outLik.boot0,
+          outLik.bootN,
+          actFC.boot1, 
+          actFC.boot0, 
+          outFC.boot1, 
+          outFC.boot0) %>%
+  mutate(exp = factor(exp, 
+                      labels = c("Study 1a", 
+                                 "Study 1b", 
+                                 "Study 2a", 
+                                 "Study 2b"))) %>%
+  # mutate(resp=ifelse(1,"Low-risk victims", "High-risk victims")) %>%
+  group_by(resp, exp) %>% 
+  summarize(y=mean(prop), ymax=quantile(prop,.975), ymin=quantile(prop,.025)) %>% 
+  ggplot(aes(y=y, ymax=ymax, ymin=ymin, x=resp)) + 
+  geom_pointrange(position=position_dodge(width=0.5), size=.25,shape=20) +
+  facet_wrap(~exp, ncol=4, scales="free_x") +
+  ylim(0, 1) +
+  labs(x="Response Choice", y = "Proportion of Responses",color="Response") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r make_fig2, include=FALSE}
+stderror <- function(x) {
+          sqrt(var(x[!is.na(x)]) / length(x[!is.na(x)]))
+}
+
+
+exp1a <- outFC %>% select(item, response) %>% mutate(exp = "Study 1a")
+exp1b <- actFC %>% select(item, response) %>% mutate(exp = "Study 1b")
+exp2a <- outLik  %>%
+  select(item, response) %>%
+  mutate(exp = "Study 2a", response=response-3)
+exp2b <- actLik %>%
+  select(item, response) %>%
+  mutate(exp = "Study 2b", response=6-response-3)
+
+allData <- bind_rows(exp1a, exp1b, exp2a, exp2b)
+
+p1 <- bind_rows(exp1a, exp1b) %>%
+  group_by(exp, item) %>%
+  summarize(mean = mean(response),
+            ll = mean(response) - stderror(response),
+            ul = mean(response) + stderror(response)) %>%
+  # mutate_if(is.numeric,log) %>%
+  ggplot(aes(y=mean, ymax=ul, ymin=ll, x=reorder(item,mean))) +
+  geom_pointrange(size=.25, shape=16) +
+  geom_hline(yintercept = .5) +
+  facet_wrap(~exp, ncol=4, scales="free_x") +
+  # ylim(0, 1) +
+  labs(x="Item", y = "Prop. choosing unexpected", color="Response") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=0))
+
+
+p2 <- bind_rows(exp2a, exp2b) %>%
+  group_by(exp, item) %>%
+  summarize(mean = mean(response),
+            ll = mean(response) - stderror(response),
+            ul = mean(response) + stderror(response)) %>%
+  # mutate_if(is.numeric,log) %>%
+  ggplot(aes(y=mean, ymax=ul, ymin=ll, x=reorder(item,mean))) +
+  geom_hline(yintercept = 0) +
+  geom_pointrange(size=.25, shape=16) +
+  facet_wrap(~exp, ncol=4, scales="free_x") +
+  # ylim(0, 1) +
+  labs(x="Item", y = "Average response", color="Response") +
+  theme_bw(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=0))
+
+fig2 <- gridExtra::grid.arrange(p1,p2,ncol=2)
+```
+
+
+```{r study1_results, cache=TRUE}
+study1_model <- brm(
+                response ~ 0 + intercept + (1|ResponseId),
+                data= outFC,
+                family=bernoulli(),
+                control = list(adapt_delta = .90),
+                cores = parallel::detectCores(),
+                prior = prior(normal(0,1), coef="intercept", class = "b"),
+                sample_prior = TRUE,
+                iter = 4000,
+                warmup = 2000)
+
+res1 <- tidy(study1_model)
+
+model1_test <- hypothesis(study1_model, "intercept = 0")
+```
+
+```{r study2_model, cache=TRUE}
+study2_model <- brm(
+                response ~  0 + intercept + (1|ResponseId),
+                data= actFC,
+                family=bernoulli(),
+                control = list(adapt_delta = .90),
+                cores = parallel::detectCores(),
+                prior = prior(normal(0,1), coef="intercept", class = "b"),
+                sample_prior = TRUE,
+                iter = 4000,
+                warmup = 2000)
+
+res2 <- tidy(study2_model)
+
+model2_test <- hypothesis(study2_model, "intercept = 0")
+# summary(study2_model)
+# hypothesis(study2_model, "intercept = 0")
+```
+
+```{r study3_model, cache=TRUE}
+
+study3_model <- brm(
+response ~ (1|ResponseId),
+data = actLik,
+family = cumulative(), # student(), #cumulative(), #bernoulli(), etc
+control = list(adapt_delta = .95),
+cores = parallel::detectCores(),
+prior = prior(normal(0,1), class = "Intercept"),
+sample_prior = TRUE,
+iter = 4000,
+warmup = 2000)
+
+
+res3 <- tidy(study3_model)
+
+# So we get four intercepts representing the cumulative log odds of the different responses. 
+# The question is whether the cumulative odds of responses 1 and 2 are greater than the cumulative log odds of responses 4 and 5. I'm getting this by comparing the `intercept[2]` 
+# representing log odds of 1 and 2 against the inverse of `intercept[3]`, where `intercept[3]` itself represents the log odds of responses 1, 2, and 3 and therefore its inverse represents # the log odds of the remaining responses 4 and 5.
+
+# test whether intercepts are different
+model3_test <- hypothesis(study3_model, "Intercept[2] = -Intercept[3]") # for full response categories
+
+```
+
+```{r study4_model, cache=TRUE}
+
+study4_model <- brm(
+response ~ (1|ResponseId),
+data = outLik,
+family = cumulative(), # student(), #cumulative(), #bernoulli(), etc
+control = list(adapt_delta = .95),
+cores = parallel::detectCores(),
+prior = prior(normal(0,1), class = "Intercept"),
+sample_prior = TRUE,
+iter = 4000,
+warmup = 2000)
+
+
+# summary(study4_model)
+
+# So we get four intercepts representing the cumulative log odds of the different responses. 
+# The question is whether the cumulative odds of responses 1 and 2 are greater than the cumulative log odds of responses 4 and 5. I'm getting this by comparing the `intercept[2]` 
+# representing log odds of 1 and 2 against the inverse of `intercept[3]`, where `intercept[3]` itself represents the log odds of responses 1, 2, and 3 and therefore its inverse represents # the log odds of the remaining responses 4 and 5.
+
+# test whether intercepts are different
+model4_test <- hypothesis(study4_model, "Intercept[2] = -Intercept[3]") # for full response categories
+
+```
+# Introduction
+
+On the evening of November 13th, 2015, a terrorist attack in Paris left 130 people dead and injured over 300 more. In the aftermath, millions took to Twitter to express their shock, horror, and outrage at this tragedy under hashtags like `#parisattacks` and `#jesuisparis`. Yet, most of those mourning had little to say 15 hours earlier, when another tragic attack killed at least 43 people in Beirut.  Several factors are surely at play in these different reactions  [e.g. group affiliations, @Brewer1999], yet one potentially fundamental factor has gone unmentioned: the fact that the Paris attack was more surprising than the attack in Beirut. In contrast to France, Lebanon had experienced dozens of terrorist bombings and attacks in recent years. Consequently, Beirut may seem to many like the sort of place where “these things happen,” whereas Paris is perceived as being stable and safe.
+
+We can see in everyday experience that people’s evaluations of events often depend on their expectations about those events. There is often disappointment when events fail to meet expectations, and there is a special thrill to having one’s expectations exceeded. Anecdotally, these forces seem to drive people’s tendencies to root for the underdog, hold surprise parties, and foreshadow bad news to ease its delivery [@Bell1985]. Indeed, laboratory studies suggest that expectations play an important role in people’s evaluations of the utility of an event. Mellers and colleagues [-@Mellers1997] found that expectations influenced affective reactions during a gambling task. Given a gamble with a 10% chance to win \$30 and 90% chance to win \$0, little disappointment is felt upon resolving with the \$0 outcome, but considerable elation is experienced upon winning the \$30. Conversely, given a gamble with a 90% chance of winning \$60 and 10% chance of winning \$0, the \$0 outcome engenders considerable disappointment and the \$60 relatively muted enjoyment. In fact, in gambles similar to these, Mellers and colleagues [-@Mellers1997] found that people were happier with the smaller unexpected gain than with the larger but more expected gain [also see @Shepperd2002].
+
+Considering the important roles of both utility and affect in moral judgment [e.g., @Greene2001], it is plausible that expectations might shape how people react to morally harmful events, such as acts of terrorism. However, unlike in the context of gambles, in these contexts the effects of expectations on evaluations may have harmful consequences. When events are shocking, people may perceive them as more severe and consequently be roused to action. In contrast, when events harm victims who are generally considered to be at greater risk--the poor, sick, or those living in unstable regions of the world, reactions may be more muted. If so, observers who learn of these events may experience reduced moral concern, and thus be less likely to donate time or money to aid victims, to take political action, and so forth.
+
+Here, we examined whether people’s evaluations of morally harmful events are affected by their expectations about those events. We asked people to compare pairs of simple events where a victim suffered an identical harm, but where the events differed in their prior probability. For each pair of events, participants were asked to judge which event was worse. Across four studies, we found that people tended to view unexpected negative events as worse, even when the harm to victims was identical.[^1]
+
+[^1]: A minor caveat is in order. We conducted an additional fifth study that did not exhibit the predicted effect of expectations on evaluations. We present and discuss this study in our supplemental online materials. We have omitted discussion of this study in the main text because the items we created in this study did not cleanly separate the unexpectedness of an event with how much harm (objectively) the event entailed. For example, one item used in this study was as follows: “A window washer is killed instantly when he falls from the 2nd floor after a cable snaps” vs. “A window washer is killed instantly when he falls from the 10th floor after a cable snaps”. Though it may be more surprising to be killed after a two-story fall, it may simply be worse to fall ten stories. Despite these concerns, we have made this data available online at https://osf.io/a6pbj/.
+
+# General Methods
+
+Here we present four studies examining the role of expectations in moral evaluations. Studies 1a and 1b are initial studies demonstrating the hypothesized phenomena: stronger reactions toward unexpected as compared to expected negative events. Studies 2a and 2b are refinements on these original studies, intended to further demonstrate the generalizability of results and to institute some methodological improvements.
+
+## Materials
+
+In all studies, participants were presented with a series of trials where they read brief (one sentence) descriptions of two different events and were asked to indicate which of the two events seemed worse. In “experimental” trials, the two events were highly similar, but differed in their prior probabilities: one event was more expected and one more unexpected.  These prior expectations were manipulated by changing the context in which the events occurred. For example, participants considered the following stimulus: 
+
+* “A 30 year old man in California dies in an earthquake” [Expected]
+
+* “A 30 year old man in Oklahoma dies in an earthquake” [Unexpected]
+
+In each event, the harm to the victim is the same (here, death) but one event is should be more expected than the other, given the different likelihoods of earthquakes occurring in California versus Oklahoma.
+
+Each study contained between 6 and 12 experimental event-pairs that spanned a variety of different events and contexts. The events described were either the result of natural forces and misfortune (1a and 2a) or the result of an action by another person (1b and 2b).  All experimental materials for these studies are available as supplemental online materials at https://osf.io/a6pbj/.
+
+Studies 1a and 1b also included “equivalent” filler trials. In these trials, the two events differed in trivial contextual details that we did not expect would affect participants’ judgments. For example: 
+
+* “A man in Connecticut starts a house fire.” [Equally expected]
+
+* “A man in New Hampshire starts a house fire.” [Equally expected]
+
+These filler trials were meant to prevent participants from becoming explicitly aware of the structure of the experimental trials.
+
+In addition to these filler trials, studies 2a and 2b added “non-equivalent” filler trials, the two events differed substantially in the degree of harm suffered by a victim, so that one event was expected to be seen as considerably worse than the other. For example: 
+
+* “An 11-year-old child sets a doll on fire” [More severe]
+
+* “A 12-year-old child sets a cat on fire”  [Less severe]
+
+These trials were included to allow participants a chance to use the extremes of the response scale and to reduce any task demands that might drive them to make artificially fine-grained distinctions between the severity of events.
+
+## Exclusions
+
+Each study also made use of attention-check items. These questions asked participants to enter a particular response to ensure that they were paying attention and reading the items as they proceeded through the study. A final question asked participants if they had paid attention and taken the study seriously, encouraging them to be honest in their replies.
+
+## Data Analysis
+
+We analyzed our data by performing Bayesian estimation using the probabilistic programming language Stan [@Carpenter2017]. We tested our predictions by computing Bayes Factors (i.e. BF01) on the intercept term of our regression model using the hypothesis function in the R package brms. As a reminder, Bayes Factors express the ratio of the probability of data under the null hypothesis to the probability of the data under an alternative hypothesis. Therefore, larger Bayes Factors indicate that the data are more likely under the null hypothesis (e.g., that the intercept is not different from zero) than the alternative hypothesis (e.g., that the intercept is different from 0), and vice versa. Bayes Factors can be influenced by prior choices so we also performed prior robustness checks to confirm that the prior alone was not accounting for the effects that we predicted.
+
+# Study 1a
+
+## Participants
+
+A total of `r n1a` participants were recruited from Amazon’s Mechanical Turk work distribution website (mTurk). Of these, `r finalN1a` passed attention checks and were included in the final analyses (`r gender1a$n[1]` male, `r gender1a$n[2]` female, median age = `r age1a` years old). All participants were paid $1.00 for their participation.
+
+## Materials and procedure
+
+Participants judged 12 experimental event-pairs and 12 equivalent filler event-pairs. The events were described in the passive voice, and participants were asked to judge which event seemed worse. For example:
+
+* A 32 year old woman gets food poisoning after eating a hamburger at a fast food restaurant. [Expected]
+
+* A 32 year old woman gets food poisoning after eating a hamburger at a four star restaurant. [Unexpected]
+
+On each trial, participants were presented with the event-pair stimulus and had to judge which outcome was worse in a two-alternative forced choice task. The two events were labeled “Outcome 1” and “Outcome 2” and their order was randomized. 
+
+## Results and discussion
+
+We predicted that people would think that events where unexpected harm occurred were worse than events that entail similar harm but were comparatively more expected. As indicated in Figure 1, when forced to choose, people judged that unexpected negative events were worse than expected events. To confirm this difference formally, we fit a Bayesian logistic random effects model with participants’ responses as the dependent variable (1 = unexpected event is worse; 0 = expected event is worse) and a random intercept for subject. The intercept in this model represents the log-odds of selecting the unexpected event as being worse. Thus, by examining the population-level intercept, we can test whether participants were biased toward selecting the unexpected event (b > 1), the expected event (B < 1), or were unbiased (B = 1). Consistent with our hypothesis, we found that people were much more likely to think that unexpected events were worse than events that were expected, Intercept = `r res1 %>% filter(term=="b_intercept") %>% select(estimate) %>% round(3)`, 95% CI [`r res1 %>% filter(term=="b_intercept") %>% select(lower) %>% round(3)`, `r res1 %>% filter(term=="b_intercept") %>% select(upper) %>% round(3)`], BF01 `r print_bf(model1_test)`. Bayes factors and the estimate of the intercept were similar under different prior choices.
+
+Figure 2 (panel 1) shows participants' responses broken-down by individual items. Participants' bias toward selecting the unexpected event as worse was largely consistent across the 12 experimental items.
+
+```{r fig1, fig.env="figure", fig.pos = "H", fig.align = "center", fig.height=3.375, fig.width=3.375, fig.cap= "Proportion of response choices across studies 1-4 (pooled across items). Error bars indicate 95 \\% bootstrapped CI."}
+
+plt.fig1
+```
+
+# Study 1b
+
+Consistent with prior work suggesting that people’s utility evaluations are affected by their expectations (e.g., Mellers et al., 1999), Study 1a provided evidence that people view unexpected moral harm as worse than expected moral harm. To expand on these findings, and conceptually replicate the results of Study 1a, in Study 1b we asked people to evaluate other people’s actions rather than the outcomes of events. 
+
+This study allowed us to confirm that, among other things, minor differences in the wording of our stimuli were not responsible for the effect observed in Study 1a. 
+
+## Participants
+
+A total of `r n1b` participants were recruited from Amazon’s Mechanical Turk work distribution website (mTurk). Of these, `r finalN1b` passed attention checks and were included in the final analyses (`r gender1b$n[1]` male, `r gender1b$n[2]` female, median age = `r age1b` years old). All participants were paid $1.00 for their participation.
+
+Small sample sizes tend to overestimate effect sizes [@Button2013]. Consequently, we also increased our sample size to confirm that the large effect observed in Study 1a was actually reflective of the effect of expectations on evaluations of moral harm.
+
+## Materials and procedure
+
+Participants judged 6 experimental event-pairs and 6 equivalent filler event-pairs. These event-pairs were adapted from event-pairs in Studies 1a and 1b in which a victim is harmed by another person’s actions. The events were rephrased into the active voice in order to focus on the agent who took the action rather than the victim who was harmed by it. The actions participants selected between were labeled “Action 1” and “Action 2.” For example, participants were presented with the following stimulus and had to judge which action was worse: 
+
+* “A wanted criminal shoots and wounds a police officer during a drug raid.” [Expected]
+
+* “A wanted criminal shoots and wounds a police officer during a traffic stop.” [Unexpected]
+
+As in experiment 1a, participants were asked to choose which of the two actions seemed worse in a two-alternative forced choice task.
+
+## Results and discussion
+
+We predicted that people would think that unexpected actions that caused harm were worse than expected actions that entailed similar harms. Just as we found in Study 1a, people judged that unexpected actions were worse than expected actions (see Figure 1, panel 2). We confirmed this difference formally by again fitting a Bayesian logistic random effects model with participants’ responses as the dependent variable (1 = unexpected action is worse; 0 = expected action is worse) and a random intercept for subject. This analysis indicated that people were more likely to think that actions that were unexpected were worse than actions that were expected, Intercept = `r res2 %>% filter(term=="b_intercept") %>% select(estimate) %>% round(3)`, 95% CI [`r res2 %>% filter(term=="b_intercept") %>% select(lower) %>% round(3)`, `r res2 %>% filter(term=="b_intercept") %>% select(upper) %>% round(3)`], BF01 `r print_bf(model2_test)`.
+
+Figure 2 shows participants' responses broken-down by individual items. Participants' bias toward selecting the unexpected action as worse were reasonably consistent across the six experimental items but there appeared to be more variation than we observed in Study 1a.
+
+In summary, Study 1b suggests that people think that unexpected actions are worse than expected actions, again indicating that when comparing to events, people’s reactions to negative events are influenced by their expectations.
+
+```{r fig2-2col, fig.env = "figure*", fig.pos = "h", fig.width=7, fig.height=2.75, fig.align = "center", set.cap.width=T, num.cols.cap=2, fig.cap = "Responses by item for studies 1-4. Error bars indicate standard errors. Responses in studies 2a and 2b are represented using scale-means for visualization purposes only (higher scores indicate greater bias toward unexpected event)."}
+
+plot(fig2)
+```
+
+# Study 2a
+
+In Studies 1a and 1b we found that people’s judgments of events were biased by their expectations about those events. When forced to choose between two events, participants decided that unexpected events were worse than expected events. In Study 2a, we sought to test our hypothesis using a more conservative method. Accordingly we made two changes in Study 2a: First, we introduced a new type of filler item “non-equivalent” filler trials and 2) we provided participants with a more expressive response scale so that if they viewed the events under consideration as equally harmful, their responses could reflect their attitude.
+
+## Participants
+
+A total of `r n2a` participants were recruited from Amazon’s Mechanical Turk work distribution website (mTurk). Of these, `r finalN2a` passed attention checks and were included in the final analyses (`r gender2a$n[1]` male, `r gender2a$n[2]` female, median age = `r age2a` years old). All participants were paid $1.00 for their participation.
+
+## Materials and procedure
+
+Participants judged 12 experimental event-pairs. In all of these event-pairs, a victim suffers a negative outcome due to misfortune, rather than another person’s actions. Some event-pairs were reused from Study 1a without modification, others were revised or novel to improve the generalizability of our findings. These materials were created by (1) eliminating materials that may have confounded expectations with, for instance, an out-group bias and (2) creating novel items to again increase the generalizability of our findings. See supplemental online materials for a full list of items used in each study https://osf.io/a6pbj/.
+
+In addition, participants judged 12 filler event-pairs. We introduced a new type of filler event-pair: “non-equivalent” event-pairs. As described previously, these are event-pairs that clearly differ in the degree of harm suffered or committed. For example, participants were presented with this stimulus and had to judge which was worse: 
+
+* “A man in Washington carjacks someone at gunpoint.” [More severe action]
+
+* “A man in Oregon steals a parked car.” [Less severe action]
+
+These items were introduced to address the concern that the high similarity within all event-pairs may drive participants to make overly-fine distinctions in their judgments. Such a task demand might inflate the effect sizes we observed in Studies 1a and 1b. Of the 12 filler events, six were “equivalent” event-pairs like those used previous studies and six were non-equivalent event pairs.
+
+As in Study 1a, on each trial of the study, participants were presented with a pair of actions labeled “Outcome 1” and “Outcome 2” and were asked, “Which outcome seems worse?” However, unlike previous studies, in Study 2a participants made their rating on a five-point scale (Outcome 1 seems worse, Outcome 1 seems a little worse, neither seems worse, Outcome 2 seems a little worse, Outcome 2 seems worse). By forcing a choice between the two events, experiments 1a and 1b may have inflated the degree of bias participants exhibited. This more expressive response-scale was used in experiments 2a and 2b to avoid this concern.
+
+## Results and discussion
+
+The events participants were asked to compare were, by design, highly similar. Consequently, we expected that participants' would typically indicate that neither event seemed worse. This was by far the choice participants most frequently made (see Figure 1, panel 3). However, we also observed that when participants did perceive one event was worse than the other, they were biased to perceive unexpected negative events as worse than more-expected negative events. 
+
+To examine these findings formally, we performed cumulative (ordinal) regression using a Bayesian random effects model with participants’ scale responses as the dependent variable (1 to 5) and a random intercept for subject. This model produces four intercept coefficients, representing the cumulative log-odds of responses at each scale point or higher. For instance, the second coefficient represents the log-odds participants chose a 2 ("outcome 2 seems slightly worse") or lower on the scale. Similarly, the third intercept coefficient represents the log-odds participants chose a 3 or lower on the scale. By comparing the second intercept coefficient to the inverse of the third intercept coefficient (thereby representing the log-odds *not* choosing a 3 or lower--i.e., choosing a 4 or 5), we can test whether participants were more likely to choose the expected or unexpected event as being worse in cases where they did not choose the neither option. This analysis indicated that people were more likely to think that events that were unexpected were worse than events that were expected, BF01 `r print_bf(model3_test)` (see supplemental online materials for full model results) -- when participants did exhibit a bias in their responses about which event was worse, they reliably chose the unexpected event was worse than the expected event. 
+
+However, these findings should be qualified by acknowledging the considerable inter-item variability across the 12 items. Figure 2, panel 3 shows participants' responses across individual items. For visualization purposes only, we display these results using the mean response across the 5-point scale. Participants were strongly biased to perceive the unexpected event as worse for approximately half of the items, but were less strongly-biased for others, and slightly biased in the reverse direction for two items.
+
+# Study 2b
+
+## Participants
+
+A total of `r n2b` participants were recruited from Amazon’s Mechanical Turk work distribution website (mTurk). Of these, `r finalN2b` passed attention checks and were included in the final analyses (`r gender2b$n[1]` male, `r gender2b$n[2]` female, median age = `r age2b` years old). All participants were paid $1.00 for their participation.
+
+## Materials and procedure
+
+Participants judged ten experimental event-pairs, five “equivalent” filler event-pairs, and five “non-equivalent” filler event-pairs. We created additional items in this study to improve and expand upon the event-pairs used in Study 1b.
+
+As in Study 1b, these events all involved an action that harmed a victim. On each trial of the study, participants were presented with a pair of actions labeled “Action 1” and “Action 2” and were asked, “Which action seems worse?” Using the same procedure as Study 2a,  participants made their rating on a five-point scale (Action 1 seems worse, Action 1 seems a little worse, neither seems worse, Action 2 seems a little worse, Action 2 seems worse).
+
+## Results and discussion
+
+Participants pattern of responses were similar to those observed in Study 2a. We found that participants chose the "neither" option in the majority of trials, but when participants did perceive one action as worse than the other, they were biased to perceive unexpected negative actions as worse than more-expected negative actions (Figure 1, panel 4). To examine these findings formally, we again performed cumulative (ordinal) regression using a Bayesian random effects model with participants’ scale responses as the dependent variable (1 to 5) and a random intercept for subject. To test our hypothesis, we compared the Bayes Factor for intercept coefficients representing the log-odds of choosing the expected and unexpected actions as worse or slightly worse. As predicted and suggested by Figure 1, this analysis indicated that people were more likely to think that actions that were unexpected were worse than actions that were expected, BF01 `r print_bf(model4_test)` (see supplemental online materials for full model results).
+
+Here too, our findings should be qualified by acknowledging the considerable variability across the 10 items of Study 2b (see Figure 2, panel 4). As shown in the plot, participants were strongly biased to perceive the unexpected event as worse for four of the items, but showed almost no bias for the other six items. 
+
+# Discussion
+
+The results of four studies suggest that people view unexpected harmful events more negatively than expected harmful events. Just as people react more strongly to unexpected monetary gains and losses [@Mellers1997], people similarly react more severely to unexpected moral harm than expected moral harm--judging those unexpected events as “worse”. 
+
+Why should our expectations influence our reactions to events? A number of researchers have sought to develop theories of disappointment--the psychological reactions that result when experiences fail to meet expectations--and its role in evaluation and decision-making [e.g., @Bell1985; @Gul1991; @Loomes1986]. These theories posit that decisions and evaluations are affected by the objective (e.g., economic) utilities of options and events, as well as disappointment individual people experience as a function of their expectations. Alternately, numerous theories of decision-making, including Prospect Theory [@Kahneman1979; @Tversky1992], have emphasized the role of relative comparisons in evaluation and decision-making. In this vein, expectations might help set the reference points against which people compare potential future outcomes.
+
+On these accounts, the influence of expectations on evaluation is simply a human quirk, a result of the way we evaluate events and decisions. In contrast, we suspect that expectations may influence evaluation through more principled means. The surprise of unexpected events may seem irrelevant to moral evaluations, but it is vital to learning. In Information Theory, the information carried by an event is a direct function of its prior probability, such that low probability events carry more information than high probability events [@Shannon1948]. Likewise, the violation of expectations has long been recognized as fundamental to associative and animal learning models [e.g., @Rescorla1972]. We suggest that people learn more about the state of the world when their expectations are violated by shocking world events, as compared to when they are affirmed by less surprising events. In this light, it seems intuitive that people would have stronger reactions to those surprising events. Still, the consequence of this dynamic is apparently suboptimal moral behavior.
+
+## Limitations
+
+Although we consistently observed a bias to judge unexpected events and actions as worse than expected events across four studies, in studies 2a and 2b, we also observed that the extent of the bias was quite dependent on the specific content of the items. This is perhaps an unsurprising consequence of our decision to use relatively naturalistic items and to manipulate expectations about these events implicitly by manipulating the context in which those events occurred. This technique has the obvious virtue of affording these items some degree of realism (as compared to artificial gambling tasks using explicitly stated probabilities that participants may or may not believe), but manipulating context may affect other aspects of participant’s interpretation of these actions, potentially introducing confounds. We sought to guard against this possibility by including a variety of different items and contextual manipulations. Still, future research is needed both to broaden these findings and to establish converging evidence through methods that are not subject to these concerns.
+
+## Conclusions
+
+The bias to view unexpected harm as worse than more expected harm threatens to impose a vicious and morally pernicious cycle: For instance, people living in geo-politically unstable regions or in the developing world are often those who are most affected by terrorism, famine, and natural disasters, and are the very people in greatest need of assistance and concern from the world at-large. However, for these very reasons, it is often unsurprising when harm befalls people living in these circumstances. Our findings suggest a bias whereby the people most likely to suffer and be victimized are the very people for whom others are least likely to be moved to help. Future research should aim to understand the processes by which this bias arises and to identify how it might be counteracted. 
+
+# Acknowledgements
+
+We would like to acknowledge the help of Keith Holyoak, Alan Fiske, Matthew Lieberman, Hongjing Lu, John Hummel, and Ellen Markman for their comments and support for the project.
+
+# References 
+
+```{r}
+# References will be generated automatically by Pandoc and included here.
+# The following code is some latex to format the bibliography. Do not remove it.
+```
+
+\setlength{\parindent}{-0.1in} 
+\setlength{\leftskip}{0.125in}
+\noindent
+
+
+
