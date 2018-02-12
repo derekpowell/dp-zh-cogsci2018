@@ -1,0 +1,83 @@
+---
+title: "Additional analyses"
+author: Derek Powell & Zachary Horne
+output: 
+  html_notebook: 
+    code_folding: hide
+---
+
+This is a summary of the fifth study mentioned in footnote 1.
+
+## Method
+
+Methods were essentially identical to those of study 2A, with the exception of the actual items that were used.
+
+### Items
+
+| Item         | High-probability event                                       | Low-probability event                                        |
+| ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| carFactory   | A factory worker is crushed to death due to an accident at an automobile plant in India. | A factory worker is crushed to death due to an accident at an automobile plant in Japan. |
+| windowFall   | A window washer is killed instantly when he falls from the 10th floor after a cable snaps. | A window washer is killed instantly when he falls from the 2nd floor after a cable snaps. |
+| highRise     | 200 people die when a high-rise apartment building in China collapses. | 200 people die when a high-rise apartment building in South Korea collapses. |
+| breastCancer | A 60 year-old woman dies from breast cancer.                 | A 60 year-old man dies from breast cancer.                   |
+| execution    | A man in Iran is executed after being falsely convicted of a crime and sentenced to death. | A man in Japan is executed after being falsely convicted of a crime and sentenced to death. |
+| drunkDriver  | A pedestrian is killed by a drunk driver on a Friday night   | A pedestrian is killed by a drunk driver on a Friday morning |
+| ankle        | An 8 year-old boy breaks his ankle while playing soccer.     | An 8 year-old boy breaks his ankle while playing tennis.     |
+| allergic     | An adolescent boy is hospitalized after having his first sudden allergic reaction to peanuts. | An adolescent boy is hospitalized after having his first sudden allergic reaction to potatoes. |
+| ebola        | 300 people die in Liberia after being exposed to Ebola.      | 300 people die in Egypt after being exposed to Ebola.        |
+
+## Results
+
+Below is a figure summarizing the results of this study.
+
+```{r}
+library(tidyverse)
+
+stderror <- function(x) {
+          sqrt(var(x[!is.na(x)]) / length(x[!is.na(x)]))
+}
+
+outLik <- read.csv("Data/wiw-outcome-likert-R.csv", skip = 0, header = T)
+
+outLik <- outLik %>% filter(DistributionChannel!="preview")
+# remove unused qualtrics variables
+remove_cols <- c("RecipientLastdata",
+                 "RecipientFirstdata",
+                 "RecipientEmail",
+                 "Finished",
+                 # "ResponseId",
+                 "ExternalReference",
+                 "DistributionChannel",
+                 "UserLanguage",
+                 "Status")
+
+outLik <- outLik[ , -which(colnames(outLik) %in% remove_cols)]
+outLik <- outLik %>%
+  filter(check5==5, check1==1) %>%
+  gather(key=item, value = response, carFactory:fireFighter)
+
+
+
+outLik <- outLik %>% mutate(response3=ifelse(response>3,1,ifelse(response < 3,-1, 0)))
+
+outLik <- outLik %>% mutate(response3r = response3*-1)
+
+
+```
+
+```{r}
+
+outLik %>% 
+  group_by(item) %>% 
+  # filter(condition=="worse") %>%
+  summarize(mean=mean(response3r), 
+            ll = mean(response3r) - stderror(response3r), 
+            ul = mean(response3r) + stderror(response3r)) %>% 
+  ggplot(aes(x=reorder(item,mean), y=mean, ymin=ll, ymax=ul)) + 
+  geom_pointrange() + 
+  geom_hline(yintercept=0) +
+  labs(x="Item", y="Average Response")
+
+```
+
+_Figure:_ Average responses by item for Study 5. Error bars indicate standard errors. Responses are represented using scale-means for visualization purposes only (higher scores indicate greater bias toward unexpected event).
