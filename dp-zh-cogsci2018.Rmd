@@ -438,7 +438,9 @@ model4_test <- hypothesis(study4_model, "Intercept[2] = -Intercept[3]") # for fu
 
 On the evening of November 13th, 2015, a terrorist attack in Paris left 130 people dead and injured over 300 more. In the aftermath, millions took to Twitter to express their shock, horror, and outrage at this tragedy under hashtags like `#parisattacks` and `#jesuisparis`. Yet, most of those mourning had little to say 15 hours earlier, when another tragic attack killed at least 43 people in Beirut. Several factors are surely at play in these different reactions  [e.g. group affiliations, @Brewer1999], yet one potentially fundamental factor has gone unmentioned: the fact that the Paris attack was more surprising than the attack in Beirut. In contrast to France, Lebanon had experienced dozens of terrorist bombings and attacks in recent years. Consequently, Beirut may seem to many like the sort of place where “these things happen,” whereas Paris is perceived as being stable and safe.
 
-We can see in everyday experience that people’s evaluations of events often depend on their expectations about those events. There is often disappointment when events fail to meet expectations, and there is a special thrill to having one’s expectations exceeded. Anecdotally, these forces seem to drive people’s tendencies to root for the underdog, hold surprise parties, and foreshadow bad news to ease its delivery [@Bell1985]. Indeed, laboratory studies suggest that expectations play an important role in people’s evaluations of the utility of an event. Mellers and colleagues [-@Mellers1997] found that expectations influenced affective reactions during a gambling task. Given a gamble with a 10% chance to win \$30 and 90% chance to win \$0, little disappointment is felt upon resolving with the \$0 outcome, but considerable elation is experienced upon winning the \$30. Conversely, given a gamble with a 90% chance of winning \$60 and 10% chance of winning \$0, the \$0 outcome engenders considerable disappointment and the \$60 relatively muted enjoyment. In fact, in gambles similar to these, Mellers and colleagues [-@Mellers1997] found that people were happier with the smaller unexpected gain than with the larger but more expected gain [also see @Shepperd2002].
+We can see in everyday experience that people’s evaluations of events often depend on their expectations about those events. There is often disappointment when events fail to meet expectations, and there is a special thrill to having one’s expectations exceeded. Anecdotally, these forces seem to drive people’s tendencies to root for the underdog, hold surprise parties, and foreshadow bad news to ease its delivery [@Bell1985]. 
+
+Indeed, laboratory studies suggest that expectations play an important role in people’s evaluations of the utility of an event. For instance, Mellers and colleagues [-@Mellers1997] found that expectations influenced affective reactions during a gambling task. Given a gamble with a 10% chance to win \$30 and 90% chance to win \$0, little disappointment is felt upon resolving with the \$0 outcome, but considerable elation is experienced upon winning the \$30. Conversely, given a gamble with a 90% chance of winning \$60 and 10% chance of winning \$0, the \$0 outcome engenders considerable disappointment and the \$60 relatively muted enjoyment. In fact, in gambles similar to these, Mellers and colleagues [-@Mellers1997] found that people were happier with the smaller unexpected gain than with the larger but more expected gain [also see @Shepperd2002].
 
 Considering the important roles of both utility and affect in moral judgment [e.g., @Greene2001], it is plausible that expectations might shape how people react to morally harmful events, such as acts of terrorism. However, unlike in the context of gambles, in these contexts the effects of expectations on evaluations may have harmful consequences. When events are shocking, people may perceive them as more severe and consequently be roused to action. In contrast, when events harm victims who are generally considered to be at greater risk--the poor, sick, or those living in unstable regions of the world, reactions may be more muted. If so, observers who learn of these events may experience reduced moral concern, and thus be less likely to donate time or money to aid victims, to take political action, and so forth.
 
@@ -458,7 +460,7 @@ In all four studies, participants were presented with a series of trials where t
 
 In each event, the harm to the victim is the same (here, death) but one event is should be more expected than the other, given the different likelihoods of earthquakes occurring in California versus Oklahoma.
 
-Each study contained between 6 and 12 experimental event-pairs that spanned a variety of different events and contexts. The events described were either the result of natural forces and misfortune (1a and 2a) or the result of an action by another person (1b and 2b).  All experimental materials for these studies are available as supplemental online materials at https://osf.io/a6pbj/.
+Each study contained between 6 and 12 experimental event-pairs that spanned a variety of different events and contexts. All experimental materials for these studies are available as supplemental online materials at https://osf.io/a6pbj/.
 
 Studies 1a and 1b also included “equivalent” filler trials. In these trials, the two events differed in trivial contextual details that we did not expect would affect participants’ judgments. For example: 
 
@@ -470,9 +472,9 @@ These filler trials were meant to prevent participants from becoming explicitly 
 
 In addition to these filler trials, studies 2a and 2b added “non-equivalent” filler trials, the two events differed substantially in the degree of harm suffered by a victim, so that one event was expected to be seen as considerably worse than the other. For example: 
 
-* “An 11-year-old child sets a doll on fire” [More severe]
+* “An 11-year-old child sets a doll on fire” [Less severe]
 
-* “A 12-year-old child sets a cat on fire”  [Less severe]
+* “A 12-year-old child sets a cat on fire”  [More severe]
 
 These trials were included to allow participants a chance to use the extremes of the response scale and to reduce any task demands that might drive them to make artificially fine-grained distinctions between the severity of events.
 
@@ -482,7 +484,7 @@ Each study also made use of attention-check items. These questions asked partici
 
 ## Data Analysis
 
-We analyzed our data by performing Bayesian estimation using the probabilistic programming language Stan [@Carpenter2017]. We tested our predictions by computing Bayes Factors (i.e. BF01) on the intercept term of our regression model using the hypothesis function in the R package brms. As a reminder, Bayes Factors express the ratio of the probability of data under the null hypothesis to the probability of the data under an alternative hypothesis. Therefore, larger Bayes Factors indicate that the data are more likely under the null hypothesis (e.g., that the intercept is not different from zero) than the alternative hypothesis (e.g., that the intercept is different from 0), and vice versa. Bayes Factors can be influenced by prior choices so we also performed prior robustness checks to confirm that the prior alone was not accounting for the effects that we predicted.
+We analyzed our data by performing Bayesian estimation using the probabilistic programming language Stan [@Carpenter2017]. We tested our predictions by computing Bayes Factors (i.e. BF01) on the intercept term of our regression model using the hypothesis function in the R package brms. As a reminder, Bayes Factors express the ratio of the probability of data under the null hypothesis to the probability of the data under an alternative hypothesis. Therefore, larger Bayes Factors indicate that the data are more likely under the null hypothesis (e.g., that the intercept is not different from zero) than the alternative hypothesis (e.g., that the intercept is different from zero), and vice versa. Bayes Factors can be influenced by prior choices so we also performed prior robustness checks to confirm that the prior alone was not accounting for the effects that we predicted.
 
 # Study 1a
 
@@ -504,7 +506,7 @@ On each trial, participants were presented with the event-pair stimulus and had 
 
 ## Results and discussion
 
-We predicted that people would think that events where unexpected harm occurred were worse than events that entail similar harm but were comparatively more expected. As indicated in Figure 1, when forced to choose, people judged that unexpected negative events were worse than expected events. To confirm this difference formally, we fit a Bayesian logistic random effects model with participants’ responses as the dependent variable (1 = unexpected event is worse; 0 = expected event is worse) and a random intercept for subject. The intercept in this model represents the log-odds of selecting the unexpected event as being worse. Thus, by examining the population-level intercept, we can test whether participants were biased toward selecting the unexpected event (b > 1), the expected event (B < 1), or were unbiased (B = 1). Consistent with our hypothesis, we found that people were much more likely to think that unexpected events were worse than events that were expected, Intercept = `r res1 %>% filter(term=="b_intercept") %>% select(estimate) %>% round(3)`, 95% CI [`r res1 %>% filter(term=="b_intercept") %>% select(lower) %>% round(3)`, `r res1 %>% filter(term=="b_intercept") %>% select(upper) %>% round(3)`], BF01 `r print_bf(model1_test)`. Bayes factors and the estimate of the intercept were similar under different prior choices.
+We predicted that people would think that events where unexpected harm occurred were worse than events that entail similar harm but were comparatively more expected. As indicated in Figure 1, when forced to choose, people judged that unexpected negative events were worse than expected events. To confirm this difference formally, we fit a Bayesian logistic random effects model with participants’ responses as the dependent variable (1 = unexpected event is worse; 0 = expected event is worse) and a random intercept for subject. The intercept in this model represents the log-odds of selecting the unexpected event as being worse. Thus, by examining the population-level intercept, we can test whether participants were biased toward selecting the unexpected event ($\beta$ > 0), the expected event ($\beta$ < 0), or were unbiased ($\beta$ = 0). Consistent with our hypothesis, we found that people were much more likely to think that unexpected events were worse than events that were expected, Intercept = `r res1 %>% filter(term=="b_intercept") %>% select(estimate) %>% round(3)`, 95% CI [`r res1 %>% filter(term=="b_intercept") %>% select(lower) %>% round(3)`, `r res1 %>% filter(term=="b_intercept") %>% select(upper) %>% round(3)`], BF01 `r print_bf(model1_test)`. Bayes factors and the estimate of the intercept were similar under different prior choices.
 
 Figure 2 (panel 1) shows participants' responses broken-down by individual items. Participants' bias toward selecting the unexpected event as worse was largely consistent across the 12 experimental items.
 
@@ -517,13 +519,13 @@ plt.fig1
 
 Consistent with prior work suggesting that people’s utility evaluations are affected by their expectations (e.g., Mellers et al., 1999), Study 1a provided evidence that people view unexpected moral harm as worse than expected moral harm. To expand on these findings, and conceptually replicate the results of Study 1a, in Study 1b we asked people to evaluate other people’s actions rather than the outcomes of events. 
 
-This study allowed us to confirm that, among other things, minor differences in the wording of our stimuli were not responsible for the effect observed in Study 1a. 
+This study allowed us to test whether expectations might also bias people’s judgments of others’ actions.
 
 ## Participants
 
 A total of `r n1b` participants were recruited from Amazon’s Mechanical Turk work distribution website (mTurk). Of these, `r finalN1b` passed attention checks and were included in the final analyses (`r gender1b$n[1]` male, `r gender1b$n[2]` female, median age = `r age1b` years old). All participants were paid $1.00 for their participation.
 
-Small sample sizes tend to overestimate effect sizes [@Button2013]. Consequently, we also increased our sample size to confirm that the large effect observed in Study 1a was actually reflective of the effect of expectations on evaluations of moral harm.
+Small sample sizes tend to overestimate effect sizes [@Button2013]. Consequently, we also increased our sample size to confirm that the large effect observed in Study 1a was robust.
 
 ## Materials and procedure
 
@@ -533,7 +535,7 @@ Participants judged 6 experimental event-pairs and 6 equivalent filler event-pai
 
 * “A wanted criminal shoots and wounds a police officer during a traffic stop.” [Unexpected]
 
-As in experiment 1a, participants were asked to choose which of the two actions seemed worse in a two-alternative forced choice task.
+As in Study 1a, participants were asked to choose which of the two actions seemed worse in a two-alternative forced choice task.
 
 ## Results and discussion
 
@@ -558,7 +560,7 @@ A total of `r n2a` participants were recruited from Amazon’s Mechanical Turk w
 
 ## Materials and procedure
 
-Participants judged 12 experimental event-pairs. In all of these event-pairs, a victim suffers a negative outcome due to misfortune, rather than another person’s actions. Some event-pairs were reused from Study 1a without modification, others were revised or novel to improve the generalizability of our findings. These materials were created by (1) eliminating materials that may have confounded expectations with, for instance, an out-group bias and (2) creating novel items to again increase the generalizability of our findings. See supplemental online materials for a full list of items used in each study https://osf.io/a6pbj/.
+Participants judged 12 experimental event-pairs. In all of these event-pairs, a victim suffers a negative outcome due to misfortune, rather than another person’s intentional actions. Some event-pairs were reused from Study 1a without modification, others were revised or novel to improve the generalizability of our findings. These materials were created by (1) eliminating materials that may have confounded expectations with, for instance, an out-group bias and (2) creating novel items to again increase the generalizability of our findings. See supplemental online materials for a full list of items used in each study https://osf.io/a6pbj/.
 
 In addition, participants judged 12 filler event-pairs. We introduced a new type of filler event-pair: “non-equivalent” event-pairs. As described previously, these are event-pairs that clearly differ in the degree of harm suffered or committed. For example, participants were presented with this stimulus and had to judge which was worse: 
 
@@ -568,7 +570,7 @@ In addition, participants judged 12 filler event-pairs. We introduced a new type
 
 These items were introduced to address the concern that the high similarity within all event-pairs may drive participants to make overly-fine distinctions in their judgments. Such a task demand might inflate the effect sizes we observed in Studies 1a and 1b. Of the 12 filler events, six were “equivalent” event-pairs like those used previous studies and six were non-equivalent event pairs.
 
-As in Study 1a, on each trial of the study, participants were presented with a pair of actions labeled “Outcome 1” and “Outcome 2” and were asked, “Which outcome seems worse?” However, unlike previous studies, in Study 2a participants made their rating on a five-point scale (Outcome 1 seems worse, Outcome 1 seems a little worse, neither seems worse, Outcome 2 seems a little worse, Outcome 2 seems worse). By forcing a choice between the two events, experiments 1a and 1b may have inflated the degree of bias participants exhibited. This more expressive response-scale was used in experiments 2a and 2b to avoid this concern.
+As in Study 1a, on each trial of the study, participants were presented with a pair of actions labeled “Outcome 1” and “Outcome 2” and were asked, “Which outcome seems worse?” However, unlike previous studies, in Study 2a participants made their rating on a five-point scale (Outcome 1 seems worse, Outcome 1 seems a little worse, neither seems worse, Outcome 2 seems a little worse, Outcome 2 seems worse). By forcing a choice between the two events, experiments 1a and 1b may have inflated the degree of bias participants exhibited. This more expressive response-scale was used in Studies 2a and 2b to address this concern.
 
 ## Results and discussion
 
@@ -606,7 +608,7 @@ On these accounts, the influence of expectations on evaluation is simply a human
 
 ## Limitations
 
-Although we consistently observed a bias to judge unexpected events and actions as worse than expected events across four studies, in studies 2a and 2b, we also observed that the extent of the bias was quite dependent on the specific content of the items. This is perhaps an unsurprising consequence of our decision to use relatively naturalistic items and to manipulate expectations about these events implicitly by manipulating the context in which those events occurred. This technique has the obvious virtue of affording these items some degree of realism (as compared to artificial gambling tasks using explicitly stated probabilities that participants may or may not believe), but manipulating context may also affect other aspects of participant’s interpretation of these actions, potentially introducing confounds. For example, despite our care in creating them, our items may have subtly confounded the likelihood of an event with the perceived race or socioeconomic status of the victims that were affected in the “likely” and “unlikely” events. Thus, it is possible that the expectations effect we observed was, in fact, driven by a difference in the victims participants imagined were affected in the event. We did guard against this possibility by including a variety of different items and contextual manipulations. Still, future research is needed both to broaden these findings and to establish converging evidence through methods that are not subject to these concerns.
+Although we consistently observed a bias to judge unexpected events and actions as worse than expected events across four studies, in Studies 2a and 2b, we also observed that the extent of the bias was quite dependent on the specific content of the items. This is perhaps an unsurprising consequence of our decision to use relatively naturalistic items and to manipulate expectations about these events implicitly by manipulating the context in which those events occurred. This technique has the obvious virtue of affording these items some degree of realism (as compared to artificial gambling tasks using explicitly stated probabilities that participants may or may not believe), but manipulating context may also affect other aspects of participant’s interpretation of these actions, potentially introducing confounds. For example, despite our care in creating them, our items may have subtly confounded the likelihood of an event with the perceived race or socioeconomic status of the victims that were affected in the “likely” and “unlikely” events. Thus, it is possible that the expectations effect we observed was, in fact, driven by differences between the victims that participants imagined suffering the event. We did guard against this possibility by including a variety of different items and contextual manipulations. Still, future research is needed both to broaden these findings and to establish converging evidence through methods that are not subject to these concerns.
 
 ## Conclusions
 
@@ -617,7 +619,6 @@ The bias to view unexpected harm as worse than more expected harm threatens to i
 We would like to acknowledge the help of Keith Holyoak, Alan Fiske, Matthew Lieberman, Hongjing Lu, John Hummel, and Ellen Markman for their comments and support for the project.
 
 # References 
-
 
 ```{r}
 # References will be generated automatically by Pandoc and included here.
